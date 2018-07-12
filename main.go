@@ -5,7 +5,9 @@ import (
 	"fmt"
 	m "go-gorillamux-gorm-pg/models"
 	"net/http"
+	"strings"
 
+	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/postgres"
@@ -28,13 +30,29 @@ func main() {
 	db.Model(&m.Customer{}).AddIndex("index_customer_id_name", "customer_id", "customer_name")
 
 	router := mux.NewRouter()
-	router.HandleFunc("/customers", getCustomers).Methods("GET")
+	router.HandleFunc("/clear", clearCache).Methods("GET")
+	router.HandleFunc("/{customers:customers\\/?}", getCustomers).Methods("GET")
 	router.HandleFunc("/customers/{id}", getCustomerById).Methods("GET")
 	router.HandleFunc("/customers/{name}/list", getCustomersByName).Methods("GET")
 	router.HandleFunc("/customers", insertCustomer).Methods("POST")
 	router.HandleFunc("/customers/{id}", updateCustomer).Methods("PUT")
 	router.HandleFunc("/customers/{id}", deleteCustomer).Methods("DELETE")
-	http.ListenAndServe(":8070", router)
+	headersOk := handlers.AllowedHeaders([]string{"Authorization"})
+	originsOk := handlers.AllowedOrigins([]string{"*"})
+	methodsOk := handlers.AllowedMethods([]string{"GET", "POST", "PUT", "DELETE", "OPTIONS"})
+	http.ListenAndServe(":8070", handlers.CORS(originsOk, headersOk, methodsOk)(router))
+}
+
+// Clear cache
+func clearCache(w http.ResponseWriter, r *http.Request) {
+	key := "customer list"
+	e := `"` + key + `"`
+	w.Header().Set("Etag", e)
+	//	w.Header().Set("Etag", "customer list")
+	w.Header().Set("Cache-Control", "max-age=0, private, no-store, no-cache, must-revalidate")
+	//	w.Header().Del("Etag")
+	//	w.Header().Set("Refresh", "url=http://localhost:8070/customers")
+	//	w.Header().Del("Cache-Control")
 }
 
 // Get customers
@@ -47,9 +65,25 @@ func getCustomers(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(404)
 		w.Write([]byte(`{"message":"data not found"}`))
 	} else {
+		key := "customer list"
+		e := `"` + key + `"`
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set("Response-Code", "00")
+		w.Header().Set("Cache-Control", "max-age=2592000") // 30 days
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Etag", e)
 		w.Header().Set("Response-Desc", "Success")
+
+		// Set Caching
+		if match := r.Header.Get("If-None-Match"); match != "" {
+			if strings.Contains(match, e) {
+				//				w.WriteHeader(http.StatusNotModified)
+				w.WriteHeader(304)
+				return
+			} else {
+				w.WriteHeader(200)
+			}
+		}
 		json.NewEncoder(w).Encode(customers)
 	}
 }
@@ -83,9 +117,25 @@ func getCustomerById(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(404)
 		w.Write([]byte(`{"message":"data not found"}`))
 	} else {
+		key := "customer list"
+		e := `"` + key + `"`
+		w.Header().Set("Etag", e)
+		w.Header().Set("Cache-Control", "max-age=2592000") // 30 days
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set("Response-Code", "00")
 		w.Header().Set("Response-Desc", "Success")
+
+		//		// Set Caching
+		if match := r.Header.Get("If-None-Match"); match != "" {
+			if strings.Contains(match, e) {
+				//				w.WriteHeader(http.StatusNotModified)
+				w.WriteHeader(304)
+				return
+			} else {
+				w.WriteHeader(200)
+			}
+		}
+
 		json.NewEncoder(w).Encode(&customer)
 	}
 }

@@ -9,6 +9,9 @@
 <p>4. <a href="https://www.postgresql.org">PostgreSQL</a></p>
 <p>5. <a href="https://www.nginx.com/">Nginx</a></p>
 
+<h3>Nginx Configuration</h3>
+<p>1. Since I installed Nginx on mac, 
+
 <h3>Sample Payload</h3>
 <p>1. <a href="./resources/getCustomers.png">Get customers</a></p>
 <p>2. <a href="./resources/getCustomersByName.png">Get customer list by name</a></p>
@@ -16,3 +19,5 @@
 <p>4. <a href="./resources/insertCustomer.png">Insert new customer</a></p>
 <p>5. <a href="./resources/updateCustomer.png">Update existing customer</a></p>
 <p>6. <a href="./resources/deleteCustomerById.png">Delete customer by id</a></p>
+
+
